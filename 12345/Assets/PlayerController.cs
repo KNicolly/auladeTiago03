@@ -1,7 +1,5 @@
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
-#endif
 
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerController : MonoBehaviour
@@ -32,9 +30,8 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         // Jump input handled in Update to not miss the press
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        // Use the new Input System APIs. Prefer gamepad if available, otherwise keyboard.
         bool jumpPressed = false;
-        // Gamepad preferred if connected
         if (Gamepad.current != null)
         {
             jumpPressed = Gamepad.current.buttonSouth.wasPressedThisFrame;
@@ -49,20 +46,13 @@ public class PlayerController : MonoBehaviour
             _rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
             _grounded = false;
         }
-#else
-        if (allowJump && _grounded && Input.GetButtonDown("Jump"))
-        {
-            _rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
-            _grounded = false;
-        }
-#endif
     }
 
     void FixedUpdate()
     {
         // Read input. Support both old Input Manager and the new Input System.
         Vector2 move = Vector2.zero;
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        // Prefer gamepad left stick; fall back to WASD/arrow keys via Keyboard.
         if (Gamepad.current != null)
         {
             move = Gamepad.current.leftStick.ReadValue();
@@ -71,13 +61,11 @@ public class PlayerController : MonoBehaviour
         {
             float x = (Keyboard.current.dKey.isPressed ? 1f : 0f) - (Keyboard.current.aKey.isPressed ? 1f : 0f);
             float y = (Keyboard.current.wKey.isPressed ? 1f : 0f) - (Keyboard.current.sKey.isPressed ? 1f : 0f);
+            // also support arrow keys
+            x += (Keyboard.current.rightArrowKey.isPressed ? 1f : 0f) - (Keyboard.current.leftArrowKey.isPressed ? 1f : 0f);
+            y += (Keyboard.current.upArrowKey.isPressed ? 1f : 0f) - (Keyboard.current.downArrowKey.isPressed ? 1f : 0f);
             move = new Vector2(x, y);
         }
-#else
-        float h = Input.GetAxis("Horizontal");
-        float v = Input.GetAxis("Vertical");
-        move = new Vector2(h, v);
-#endif
 
         Vector3 input = new Vector3(move.x, 0f, move.y);
         if (input.sqrMagnitude > 0.0001f)
